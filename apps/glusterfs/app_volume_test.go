@@ -1034,3 +1034,64 @@ func TestVolumeClusterResizeByAddingDevices(t *testing.T) {
 	err = v.Create(app.db, app.executor, app.allocator)
 	tests.Assert(t, err == ErrNoSpace)
 }
+
+// In this function, we add new nodes to the cluster,
+// also add new devices to that node and register that devices
+
+func TestVolumeClusterResizeByAddingNodes(t *testing.T) {
+
+	tmpfile := tests.Tempfile()
+	defer os.Remove(tmpfile)
+
+	// Create the app
+	app := NewTestApp(tmpfile)
+	defer app.Close()
+	router := mux.NewRouter()
+	app.SetRoutes(router)
+
+	// Setup the server
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	// Create a cluster
+	err := setupSampleDbWithTopology(app,
+		1,      // clusters
+		2,      // nodes_per_cluster
+		1,      // devices_per_node,
+		500*GB, // disksize)
+	)
+	tests.Assert(t, err == nil)
+
+	// Create a node
+	req := &api.NodeAddRequest{
+		ClusterId: "1",
+		Hostnames: api.HostAddresses{
+			Manage:  []string{"manage"},
+			Storage: []string{"storage"},
+		},
+		Zone: 1,
+	}
+
+	// Add devices to that perticular node
+
+	n := NewNodeEntryFromRequest(req)
+	n.DeviceAdd("xyz")
+	tests.Assert(t, len(n.Devices) == 1)
+
+	//Add another node to this cluster with a device in it,
+	// here nn would be the new node
+
+	// Create a client
+	c := client.NewClientNoAuth(ts.URL)
+	tests.Assert(t, c != nil)
+
+	// Get the cluster ID
+	clusters, err := c.ClusterList()
+	tests.Assert(t, len(clusters.Clusters) == 1)
+	clusterId := clusters.Clusters[0]
+
+	// Get Nodes
+	clusterInfo, err := c.ClusterInfo(clusterId)
+	tests.Assert(t, len(clusterInfo.Nodes) == 2)
+
+}
