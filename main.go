@@ -12,17 +12,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"github.com/gorilla/mux"
 	"github.com/heketi/heketi/apps"
 	"github.com/heketi/heketi/apps/glusterfs"
 	"github.com/heketi/heketi/middleware"
 	"github.com/spf13/cobra"
 	"github.com/urfave/negroni"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-
 	"k8s.io/kubernetes/pkg/client/restclient"
 )
 
@@ -122,7 +121,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Substitue values using any set environment variables
+	// Substitute values using any set environment variables
 	setWithEnvVariables(&options)
 
 	// Use negroni to add middleware.  Here we add two
